@@ -1,0 +1,9 @@
+body::-webkit-scrollbar {
+    width: 0.5em;
+    background-color: transparent;
+}
+ 
+body::-webkit-scrollbar-thumb {
+	background-color: $primary;
+	border-radius: 1em;
+}
