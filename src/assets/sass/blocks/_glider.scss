@@ -1,0 +1,32 @@
+.glider {
+    position: relative;
+    background: #25282A;
+}
+
+.glider__inner {
+    overflow: hidden;
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,0.08), 0 7px 22px 0 rgba(0,0,0,0.12);
+    border-radius: 8px;
+}
+
+.glider-dots {
+    position: absolute;
+    right: 0;
+    bottom: -40px;
+    z-index: 100;
+}
+
+.glider-dot {
+    background: #71ABFF;
+    border: 1px solid #71ABFF;
+    width: 8px;
+    height: 8px;
+}
+
+.glider-dot:hover {
+    background: #fff;
+}
+
+.glider-dot.active {
+    background: transparent;
+}
