@@ -1,6 +1,6 @@
 //= components/glider.min.js
 
-alert('Это демонвариант, адаптива под мобилку нет, фото тоже временное');
+//alert('Это демонвариант, адаптива под мобилку нет, фото тоже временное');
 
 new Glider(document.querySelector('.glider_one'), {
 	slidesToShow: 1,

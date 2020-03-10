@@ -2,19 +2,26 @@
 	overflow: hidden;
 
 	&__head {
-		padding-bottom: .5em;
+		text-align: center;
 		font-size: 32px;
 		font-weight: 800;
 		color: #000000;
 		line-height: 36px;
+		padding-bottom: .5em;
 	}
 
 	&__subhead {
+		text-align: center;
 		font-size: 1.2em;
 	}
 
-	&__text {
+	&__subhead,
+	&__text,
+	&__link {
 		font-family: 'PT Mono', monospace;
+	}
+
+	&__text {
 		font-size: 14px;
 		line-height: 20px;
 		text-align: justify;
@@ -22,7 +29,6 @@
 	}
 
 	&__link {
-		font-family: 'PT Mono', monospace;
 		display: inline-flex;
 		color: $blue;
 		line-height: 20px;

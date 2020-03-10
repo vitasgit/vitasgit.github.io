@@ -4,8 +4,10 @@
 
 @media  (max-width: 1000px) {
     .container {
+    	width: 520px;
   		padding: 50px 0;
   	}
+
 
   	.btn {
   		width: 240px;
@@ -13,14 +15,72 @@
 
   	.hero {
 		&__img {
-			width: 40%;
-			height: 40%;
-			margin-top: 0;
+			width: 49%;
+			height: 49%;
+			margin-top: 115px;
 		}
 
 		&__head {
 			font-size: 2rem;
 		}
+
+		&__btn {
+			margin-bottom: 115px;
+		}
+
+		&-section {
+			height: 100%;
+		}
+  	}
+
+  	.portfolio {
+  		&__subhead {
+  			margin-bottom: 60px;
+  		}
+  	}
+
+  	.glider {
+  		&-dots {
+  			right: calc(50% - 33px);
+  			bottom: -2rem;
+  		}
+
+  		&-block {
+  			&__text {
+  				margin-top: 2rem;
+  			}
+  		}
+
+  		&-block + &-block {
+  			margin-top: 60px;
+  		}
+  	}
+
+  	.contact-form {
+  		&__input-box {
+			flex-direction: column;
+  		}
+
+  		&__input {
+			width: 100%;
+  		}
+
+  		&__input + &__input {
+  			margin-top: 1rem;
+  		}
+
+  		&__textarea {
+  			width: 100%;
+  			margin-top: 1rem;
+  		}
+
+  		&__btn-inputfile {
+  			margin: 1rem 0;
+  		}
+
+  		&__btn-submit {
+  			width: 100%;
+  		}
   	}
 }
 
@@ -30,6 +90,38 @@
 	}
 
 	.btn {
-		width: 80%;
+		width: 100%;
 	}
+
+    .container {
+    	width: 100%;
+  		padding: 50px 20px;
+  		margin: 0;
+  	}
+
+  	.hero {
+		&__img {
+			width: 65%;
+			height: 65%;
+			margin-top: 35px;
+		}
+
+		&__head {
+			font-size: 2rem;
+		}
+
+		&__btn {
+			margin-bottom: 35px;
+		}
+
+		&-section {
+			height: 100%;
+		}
+  	}
+
+  	.portfolio {
+  		&__subhead {
+  			font-size: 1.2rem;
+  		}
+  	}
 }
