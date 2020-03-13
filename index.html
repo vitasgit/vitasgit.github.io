@@ -4,10 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="assets/css/style.min.css">
+    
     <!-- fonts -->
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600,700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=PT+Mono&display=swap&subset=cyrillic" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Open+Sans|PT+Sans&display=swap" rel="stylesheet">
+    
+    <!-- aos animation -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     
     <!-- Useful meta tags -->
     <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -84,12 +88,33 @@
 					src="assets/img/me7.jpg"
 					alt="person"
 					title="пездюк с платком"
-				>
+					data-aos="fade-down"
+					>
 				
-				<h1 class="page__head hero__head">Виталио Жданови</h1>
-				<p class="page__text hero__text t-color_gray">Front-end developer based in pomoyka, Shadrinsk</p>
+				<h1 
+					class="page__head hero__head"
+					data-aos="zoom-in"
+					data-aos-delay="250"
+					>
+					Виталио Жданови
+				</h1>
+			
+				<p 
+					class="page__text hero__text t-color_gray"
+					data-aos="zoom-in"
+				    data-aos-delay="500"
+				    >
+					Front-end developer based in pomoyka, Shadrinsk
+				</p>
 				
-				<a class="btn hero__btn" href="#">Связаться</a>
+				<a 
+					class="btn hero__btn"
+					href="#"
+					data-aos="fade-up"
+					data-aos-delay="1000"
+					>
+					Связаться
+				</a>
 			</div>
 			<!-- /.hero -->		</div>
 	</section>
@@ -277,23 +302,10 @@
 		<!-- /.footer -->	</section>
 </div>
 
-<script src="assets/js/app.js"></script>
-	
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript" >
-   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-   m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-   (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+<!-- aos animation -->
+<script src="https://unpkg.com/aos@next/dist/aos.js"></script>
 
-   ym(60675427, "init", {
-        clickmap:true,
-        trackLinks:true,
-        accurateTrackBounce:true,
-        webvisor:true
-   });
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/60675427" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
+<script src="assets/js/app.js"></script>
 
 </body>
 </html>
