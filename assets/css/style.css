@@ -445,14 +445,14 @@ input:checked ~ .tab-content {
     border-radius: 50%;
     margin: 25px 0 38px 0;
     cursor: pointer;
-    -webkit-transition: -webkit-transform 0.5s linear;
-    transition: -webkit-transform 0.5s linear;
-    -o-transition: transform 0.5s linear;
-    transition: transform 0.5s linear;
-    transition: transform 0.5s linear, -webkit-transform 0.5s linear;
+    -webkit-transition: -webkit-transform 0.5s ease;
+    transition: -webkit-transform 0.5s ease;
+    -o-transition: transform 0.5s ease;
+    transition: transform 0.5s ease;
+    transition: transform 0.5s ease, -webkit-transform 0.5s ease;
 }
 
-.hero__img:active {
+.hero__img--rotate {
     -webkit-transform: rotate(180deg);
     -ms-transform: rotate(180deg);
     transform: rotate(180deg);

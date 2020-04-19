@@ -57,3 +57,13 @@ AOS.init({
     anchorPlacement: 'top-bottom', // defines which position of the element regarding to window should trigger the animation
   
   });
+
+var heroImage = document.querySelector(".hero__img");
+
+heroImage.addEventListener("click", function() {
+    if (heroImage.hasAttribute("data-aos") == true) {
+        heroImage.removeAttribute("data-aos");
+    }
+
+    heroImage.classList.toggle("hero__img--rotate");
+});
