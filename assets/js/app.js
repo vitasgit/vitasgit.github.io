@@ -58,12 +58,37 @@ AOS.init({
   
   });
 
-var heroImage = document.querySelector(".hero__img");
+let heroImage = document.querySelector(".hero__img");
+let heroBtn = document.querySelector(".hero__btn");
+let counter = 0;
 
 heroImage.addEventListener("click", function() {
     if (heroImage.hasAttribute("data-aos") == true) {
-        heroImage.removeAttribute("data-aos");
+      heroImage.removeAttribute("data-aos");
     }
 
     heroImage.classList.toggle("hero__img--rotate");
 });
+
+heroBtn.addEventListener("click", () => {
+  counter += 1;
+
+  if (counter == 2) {
+    alert('Ты че тыкаш, не видишь кнопка не работает?');
+  }
+
+  if (counter == 3 ) {
+    alert('Алло я кому сказал');
+  }
+
+  if (counter == 4 ) {
+    alert('Себя потыкай');
+  }
+
+  if (counter == 5 ) {
+    alert('За тобой выехали чепушила');
+    document.location = '404';
+  }
+});
+
+
