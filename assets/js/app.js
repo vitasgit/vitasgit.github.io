@@ -60,14 +60,24 @@ AOS.init({
 
 let heroImage = document.querySelector(".hero__img");
 let heroBtn = document.querySelector(".hero__btn");
+myAudioElement = document.querySelector('.page-audio');
+myAudioElement.volume = 0.7;
 let counter = 0;
 
 heroImage.addEventListener("click", function() {
+    heroImage.classList.toggle("hero__img--rotate");
     if (heroImage.hasAttribute("data-aos") == true) {
       heroImage.removeAttribute("data-aos");
     }
 
-    heroImage.classList.toggle("hero__img--rotate");
+    heroImage.classList.toggle('playing');
+    if (heroImage.classList.contains('playing')) {
+      myAudioElement.play();
+    }
+
+    if (!heroImage.classList.contains('playing')) {
+      myAudioElement.pause();
+    }
 });
 
 heroBtn.addEventListener("click", () => {
@@ -90,5 +100,6 @@ heroBtn.addEventListener("click", () => {
     document.location = '404';
   }
 });
+
 
 
