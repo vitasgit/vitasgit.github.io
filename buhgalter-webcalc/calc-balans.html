@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>БухКальк</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/400.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/500.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/600.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/700.css" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    .t-account-row { display: grid; grid-template-columns: 1fr 1fr; }
+    .t-cell { padding: 0.6rem 0.8rem; font-size: 0.95rem; display: flex; align-items: center; justify-content: inherit; }
+    .t-cell-debit { border-right: 2px solid #334155; justify-content: flex-end; }
+    .t-cell-credit { justify-content: flex-start; }
+
+    input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .tab-active { background-color: #2563eb; color: white; border-color: #2563eb; }
+    .tab-inactive { background-color: white; color: #64748b; border-color: #cbd5e1; }
+
+    .balance-row { display: flex; justify-content: space-between; padding: 0.25rem 0.5rem; border-bottom: 1px dashed #e2e8f0; font-size: 0.9rem; }
+    .balance-row:last-child { border-bottom: none; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-6 px-4 flex justify-center items-start">
+
+  <main class="w-full max-w-lg md:max-w-3xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 mb-10">
+    <header class="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-4 text-center shadow-md">
+      <h1 class="text-xl font-bold tracking-tight">БухКальк</h1>
+    </header>
+
+    <!-- Навигация -->
+    <nav class="flex border-b border-slate-200 bg-slate-50 p-1 gap-1 overflow-x-auto">
+      <button id="tabBalance" class="flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold transition border border-transparent tab-active" onclick="switchTab('balance')">Баланс (начало)</button>
+      <button id="tabCalc" class="flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold transition border border-transparent tab-inactive" onclick="switchTab('calc')">Калькулятор самолетиков</button>
+      <button id="tabTable" class="flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold transition border border-transparent tab-inactive" onclick="switchTab('table')">Синтетическая таблица</button>
+      <button id="tabEndBalance" class="flex-1 min-w-[100px] py-2 px-3 rounded-lg text-sm font-semibold transition border border-transparent tab-inactive" onclick="openEndBalanceModal()">Баланс (конец)</button>
+    </nav>
+
+    <!-- Вью: Баланс -->
+    <div id="viewBalance" class="hidden p-4 space-y-4">
+      <h2 class="text-lg font-bold text-slate-800">Бухгалтерский баланс (на начало периода)</h2>
+
+      <!-- Форма ввода баланса -->
+      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+        <div class="flex flex-col gap-1 flex-1 min-w-[120px]">
+          <label class="text-xs font-medium text-slate-600">Тип (авто/ручной)</label>
+          <div class="flex items-center gap-2">
+            <select id="balType" class="flex-1 border border-slate-300 rounded-lg px-2 py-2 bg-white text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+              <option value="active">Актив (+)</option>
+              <option value="passive">Пассив (-)</option>
+            </select>
+            <label class="flex items-center gap-1 cursor-pointer select-none" title="Ручной выбор">
+              <input type="checkbox" id="manualToggleBal" class="sr-only peer">
+              <div class="w-8 h-4 bg-slate-300 rounded-full peer peer-checked:bg-blue-600 relative transition-colors">
+                <div class="w-3 h-3 bg-white rounded-full shadow-sm absolute top-0.5 left-0.5 transition-transform peer-checked:translate-x-full"></div>
+              </div>
+              <span class="text-xs text-slate-500">Ручной</span>
+            </label>
+          </div>
+        </div>
+        <div class="flex flex-col gap-1 w-full sm:w-24">
+          <label class="text-xs font-medium text-slate-600">Код счета</label>
+          <input type="text" id="balCode" inputmode="numeric" placeholder="10" class="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" oninput="handleBalanceCodeInput(this.value)">
+        </div>
+        <div class="flex flex-col gap-1 w-full sm:w-32">
+          <label class="text-xs font-medium text-slate-600">Сумма (Сн)</label>
+          <input type="text" id="balAmount" inputmode="numeric" placeholder="0.00" class="w-full px-2 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none" oninput="formatInput(this)">
+        </div>
+        <button onclick="calculateBalance()" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition text-sm whitespace-nowrap">Рассчитать</button>
+        <button onclick="toggleAccountsList()" class="w-full sm:w-auto bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium py-2 px-4 rounded-lg border border-slate-300 transition text-sm whitespace-nowrap">Список счетов</button>
+      </div>
+
+      <!-- Список счетов -->
+      <div id="accountsListSection" class="hidden bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-bold text-slate-700">Добавленные счета</h3>
+          <button onclick="toggleAccountsList()" class="text-slate-400 hover:text-slate-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        <div id="accountsList" class="space-y-2 max-h-48 overflow-y-auto custom-scroll"></div>
+        <p class="text-xs text-slate-400 mt-2 text-center">Нажмите на значение для редактирования</p>
+      </div>
+
+      <!-- Таблица Баланса -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden h-[500px] flex flex-col">
+        <div class="grid grid-cols-2 divide-x divide-slate-300 flex-1 overflow-y-auto custom-scroll">
+          <!-- Актив -->
+          <div class="p-3 flex flex-col">
+            <h3 class="font-bold text-blue-700 mb-2 text-center text-sm uppercase tracking-wide bg-blue-50 py-1 rounded">Актив</h3>
+            <div id="balanceAssets" class="flex-1 space-y-4 pr-2">
+              <!-- Sections injected here -->
+            </div>
+            <div class="mt-3 pt-2 border-t-2 border-slate-700 bg-slate-50 rounded px-2 py-2 flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">ИТОГО Актив:</span>
+              <span id="totalAssets" class="font-bold text-blue-800 font-mono text-lg">0.00</span>
+            </div>
+          </div>
+          <!-- Пассив -->
+          <div class="p-3 flex flex-col">
+            <h3 class="font-bold text-red-700 mb-2 text-center text-sm uppercase tracking-wide bg-red-50 py-1 rounded">Пассив</h3>
+            <div id="balanceLiabilities" class="flex-1 space-y-4 pl-2">
+              <!-- Sections injected here -->
+            </div>
+            <div class="mt-3 pt-2 border-t-2 border-slate-700 bg-slate-50 rounded px-2 py-2 flex justify-between items-center">
+              <span class="font-bold text-slate-800 text-sm">ИТОГО Пассив:</span>
+              <span id="totalLiabilities" class="font-bold text-red-800 font-mono text-lg">0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="text-xs text-slate-500 text-center">Данные заполняются автоматически при расчете Т-счетов или вручную</p>
+    </div>
+
+    <!-- Вью: Калькулятор -->
+    <div id="viewCalc" class="hidden p-4 space-y-4">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-1">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Тип счета</label>
+          <div class="flex items-center gap-2">
+            <select id="accType" class="flex-1 border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm disabled:opacity-60 disabled:cursor-not-allowed">
+              <option value="active">Активный (+)</option>
+              <option value="passive">Пассивный (-)</option>
+            </select>
+            <label class="flex items-center gap-1.5 cursor-pointer select-none">
+              <input type="checkbox" id="manualToggle" class="sr-only peer">
+              <div class="w-8 h-4 bg-slate-200 rounded-full peer peer-checked:bg-blue-600 relative transition-colors">
+                <div class="w-3 h-3 bg-white rounded-full shadow-sm absolute top-0.5 left-0.5 transition-transform peer-checked:translate-x-full"></div>
+              </div>
+              <span class="text-xs text-slate-500">Ручной</span>
+            </label>
+          </div>
+        </div>
+        <div class="col-span-1">
+          <label class="block text-sm font-medium text-slate-700 mb-1">Номер счета</label>
+          <input type="text" inputmode="numeric" id="accNumber" placeholder="Авто-выбор" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Сальдо начальное (Сн)</label>
+        <input type="text" inputmode="numeric" id="openingBalance" placeholder="0.00" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition font-mono text-lg" oninput="formatInput(this)">
+        <p id="snHint" class="hidden text-xs text-amber-600 mt-1">Загружено из баланса (начало)</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col h-48">
+          <div class="flex justify-between items-center mb-1 shrink-0">
+            <span class="text-xs font-semibold text-blue-700 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Дебет</span>
+            <button onclick="addOperationRow('debit')" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded transition font-medium">+ Добавить</button>
+          </div>
+          <div id="debitList" class="space-y-1.5 overflow-y-auto custom-scroll pr-1 flex-grow"></div>
+        </div>
+
+        <div class="bg-slate-50 p-2 rounded-xl border border-slate-200 flex flex-col h-48">
+          <div class="flex justify-between items-center mb-1 shrink-0">
+            <span class="text-xs font-semibold text-red-700 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Кредит</span>
+            <button onclick="addOperationRow('credit')" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded transition font-medium">+ Добавить</button>
+          </div>
+          <div id="creditList" class="space-y-1.5 overflow-y-auto custom-scroll pr-1 flex-grow"></div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1">
+        <button id="calcBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold py-2.5 px-4 rounded-lg shadow-lg shadow-blue-200 transition">Рассчитать</button>
+        <button id="resetBtn" class="flex-shrink-0 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 font-medium py-2.5 px-4 rounded-lg transition" title="Сбросить">Сброс</button>
+      </div>
+    </div>
+
+    <!-- Вью: Таблица -->
+    <div id="viewTable" class="hidden">
+      <div class="overflow-x-auto w-full custom-scroll">
+        <table class="w-full text-sm text-left text-slate-600">
+          <thead class="text-xs text-slate-700 uppercase bg-slate-100 border-b border-slate-300">
+            <tr>
+              <th class="px-2 py-2 border-r border-slate-300 w-12">Код</th>
+              <th class="px-2 py-2 border-r border-slate-300">Наименование</th>
+              <th class="px-2 py-2 bg-blue-50/50 text-center border-r border-slate-300">Сн<br>Дт</th>
+              <th class="px-2 py-2 bg-blue-50/50 text-center border-r border-slate-300">Сн<br>Кт</th>
+              <th class="px-2 py-2 bg-purple-50/50 text-center border-r border-slate-300">Од</th>
+              <th class="px-2 py-2 bg-purple-50/50 text-center border-r border-slate-300">Ок</th>
+              <th class="px-2 py-2 bg-green-50/50 text-center border-r border-slate-300">Ск<br>Дт</th>
+              <th class="px-2 py-2 bg-green-50/50 text-center">Ск<br>Кт</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+      <p class="text-xs text-slate-400 text-center py-2 px-4 italic">* Данные обновляются автоматически</p>
+    </div>
+
+    <!-- Результат Т-счета -->
+    <div id="resultSection" class="hidden bg-slate-50 border-t border-slate-200 p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h2 class="text-base font-bold text-slate-800">Результат Т-счета</h2>
+        <span id="accTypeLabel" class="text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Активный</span>
+      </div>
+      <div class="bg-white rounded-lg shadow-sm border border-slate-300 overflow-hidden">
+        <div class="bg-slate-100 border-b-2 border-slate-800 py-1.5 px-3 text-center">
+          <span id="resAccNum" class="text-base font-bold text-slate-800">10</span>
+        </div>
+        <div class="t-account-row bg-slate-50 border-b border-slate-300 text-xs font-bold">
+          <div id="subDebit" class="t-cell t-cell-debit text-blue-800">Дебет (+)</div>
+          <div id="subCredit" class="t-cell t-cell-credit text-red-800">Кредит (-)</div>
+        </div>
+        <div id="resGrid" class="divide-y divide-slate-200"></div>
+      </div>
+      <p class="text-xs text-slate-500 mt-2 text-center"><span id="formulaText"></span></p>
+    </div>
+  </main>
+
+  <script>
+    const formatter = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
+    const debitListEl = document.getElementById('debitList');
+    const creditListEl = document.getElementById('creditList');
+    const resGrid = document.getElementById('resGrid');
+    const resultSection = document.getElementById('resultSection');
+    const tableBody = document.getElementById('tableBody');
+    const balanceAssetsEl = document.getElementById('balanceAssets');
+    const balanceLiabilitiesEl = document.getElementById('balanceLiabilities');
+
+    // Единый реестр счетов
+    let accountRegistry = {};
+
+    const activeAccounts = ['01','03','04','07','08','09','10','11','19','20','21','23','25','26','28','29','41','43','44','45','46','50','51','52','55','57','58', '62','81','94','97'];
+    const passiveAccounts = ['02','05','42','59','60','63','66','67', '68', '69', '70','77','80','82','83', '84', '96','98'];
+    const contraAccounts = ['02', '05'];
+
+    const accountNames = {
+      '01': 'Основные средства', '02': 'Амортизация основных средств', '03': 'Доходные вложения в материальные ценности',
+      '04': 'Нематериальные активы', '05': 'Амортизация нематерильных активов', '07': 'Оборудование к установке',
+      '08': 'Вложения во внеоборотные активы', '09': 'Отложенные налоговые активы', '10': 'Материалы',
+      '11': 'Животные на выращивании и откорме', '14': 'Резервы под снижение стоимости материальных ценностей',
+      '15': 'Заготовление и приобретение материальных ценностей', '16': 'Отклонение в стоимости материальных ценностей',
+      '19': 'Налог на добавленную стоимость по приобретенным ценностям', '20': 'Основное производство',
+      '21': 'Полуфабрикаты собственного производства', '23': 'Вспомогательные производства',
+      '25': 'Общепроизводственные расходы', '26': 'Общехозяйственные расходы', '28': 'Брак в производстве',
+      '29': 'Обслуживающие производства и хозяйства', '40': 'Выпуск продукции (работ, услуг)',
+      '41': 'Товары', '42': 'Торговая наценка', '43': 'Готовая продукция', '44': 'Расходы на продажу',
+      '45': 'Товары отгруженные', '46': 'Выполненные этапы по незавершенным работам', '50': 'Касса',
+      '51': 'Расчетные счета', '52': 'Валютные счета', '55': 'Специальные счета в банках',
+      '57': 'Переводы в пути', '58': 'Финансовые вложения', '59': 'Резервы под обесценение финансовых вложений',
+      '60': 'Расчеты с поставщиками и подрядчиками', '62': 'Расчеты с покупателями и заказчиками',
+      '63': 'Резервы по сомнительным долгам', '66': 'Расчеты по краткосрочным кредитам и займам',
+      '67': 'Расчеты по долгосрочным кредитам и займам', '68': 'Расчеты по налогам и сборам',
+      '69': 'Расчеты по социальному страхованию и обеспечению', '70': 'Расчеты с персоналом по оплате труда',
+      '71': 'Расчеты с подотчетными лицами', '73': 'Расчеты с персоналом по прочим операциям',
+      '75': 'Расчеты с учредителями', '76': 'Расчеты с разными дебиторами и кредиторами',
+      '77': 'Отложенные налоговые обязательства', '79': 'Внутрихозяйственные расчеты',
+      '80': 'Уставный капитал', '81': 'Собственные акции (доли)', '82': 'Резервный капитал',
+      '83': 'Добавочный капитал', '84': 'Нераспределенная прибыль (непокрытый убыток)',
+      '86': 'Целевое финансирование', '90': 'Продажи', '91': 'Прочие доходы и расходы',
+      '94': 'Недостачи и потери от порчи ценностей', '96': 'Резервы предстоящих расходов',
+      '97': 'Расходы будущих периодов', '98': 'Доходы будущих периодов', '99': 'Прибыли и убытки'
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      addOperationRow('debit');
+      addOperationRow('credit');
+      document.getElementById('accType').disabled = true;
+      renderTable();
+      renderBalanceSheet();
+    });
+
+    function switchTab(mode) {
+      document.querySelectorAll('[id^="tab"], [id^="view"]').forEach(el => {
+        if (el.id.startsWith('tab')) {
+          el.className = el.className.replace('tab-active', 'tab-inactive');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+      document.getElementById(`tab${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.replace('tab-inactive', 'tab-active');
+      document.getElementById(`view${mode.charAt(0).toUpperCase() + mode.slice(1)}`).classList.remove('hidden');
+
+      if (mode === 'table') renderTable();
+      if (mode === 'balance') renderBalanceSheet();
+    }
+
+    // Автоопределение для Т-счета + автоподстановка Сн
+    document.getElementById('accNumber').addEventListener('input', (e) => {
+      const raw = e.target.value.replace(/\D/g, '');
+      if (!raw) {
+        document.getElementById('openingBalance').value = '';
+        document.getElementById('openingBalance').classList.remove('bg-yellow-50');
+        document.getElementById('snHint').classList.add('hidden');
+        return;
+      }
+      const code = raw.padStart(2, '0');
+
+      if (!document.getElementById('manualToggle').checked) {
+        if (activeAccounts.includes(code)) document.getElementById('accType').value = 'active';
+        else if (passiveAccounts.includes(code)) document.getElementById('accType').value = 'passive';
+      }
+
+      const existingAcc = accountRegistry[code];
+      const snInput = document.getElementById('openingBalance');
+      const hintEl = document.getElementById('snHint');
+
+      if (existingAcc && existingAcc.sn > 0) {
+        snInput.value = existingAcc.sn.toLocaleString('ru-RU');
+        snInput.classList.add('bg-yellow-50');
+        hintEl.classList.remove('hidden');
+      } else {
+        snInput.value = '';
+        snInput.classList.remove('bg-yellow-50');
+        hintEl.classList.add('hidden');
+      }
+    });
+    document.getElementById('manualToggle').addEventListener('change', (e) => {
+      document.getElementById('accType').disabled = !e.target.checked;
+    });
+
+    // Автоопределение для Баланса
+    function handleBalanceCodeInput(value) {
+      if (document.getElementById('manualToggleBal').checked) return;
+      const raw = value.replace(/\D/g, '');
+      if (!raw) return;
+      const code = raw.padStart(2, '0');
+      if (activeAccounts.includes(code)) document.getElementById('balType').value = 'active';
+      else if (passiveAccounts.includes(code)) document.getElementById('balType').value = 'passive';
+    }
+    document.getElementById('manualToggleBal').addEventListener('change', (e) => {
+      document.getElementById('balType').disabled = !e.target.checked;
+    });
+
+    // Форматирование ввода
+    function formatInput(input) {
+      const start = input.selectionStart;
+      const originalLength = input.value.length;
+      let val = input.value.replace(/[^\d.,]/g, '').replace(/,/g, '.');
+      if (!val) { input.value = ''; return; }
+      const parts = val.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      input.value = val.endsWith('.') ? parts[0] + '.' : parts.length > 1 ? parts[0] + '.' + parts[1].slice(0, 2) : parts[0];
+      const newLength = input.value.length;
+      let newPos = start + (newLength - originalLength);
+      if (newPos < 0) newPos = 0;
+      if (newPos > newLength) newPos = newLength;
+      input.setSelectionRange(newPos, newPos);
+    }
+
+    function addOperationRow(type) {
+      const container = type === 'debit' ? debitListEl : creditListEl;
+      const row = document.createElement('div');
+      row.className = 'input-row flex gap-2 items-center bg-white p-1.5 rounded border border-slate-200 shadow-sm';
+      row.innerHTML = `
+        <input type="text" inputmode="numeric" placeholder="Сумма" class="w-full bg-transparent outline-none font-mono text-sm text-slate-700 placeholder:text-slate-300" oninput="formatInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();addOperationRow('${type}')}">
+        <button class="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition" onclick="removeRow(this)">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+        </button>
+      `;
+      container.appendChild(row);
+      row.querySelector('input').focus();
+    }
+
+    function removeRow(btn) {
+      const container = btn.closest('#debitList, #creditList');
+      const row = btn.closest('.input-row');
+      if (container.children.length > 1) row.remove();
+      else row.querySelector('input').value = '';
+    }
+
+    function getValues(container) {
+      return Array.from(container.querySelectorAll('input'))
+        .map(inp => parseFloat(inp.value.replace(/\s/g, '')))
+        .filter(val => !isNaN(val) && val !== 0);
+    }
+
+    function saveToRegistry(code, type, sn, od, ok, sk) {
+      if (!code) return;
+      const normCode = code.replace(/\s/g, '').padStart(2, '0');
+      if (!accountRegistry[normCode]) {
+        accountRegistry[normCode] = { name: accountNames[normCode] || `Счет ${normCode}`, type, sn, od, ok, sk };
+      } else {
+        accountRegistry[normCode].type = type;
+        accountRegistry[normCode].sn = sn;
+        accountRegistry[normCode].od = od;
+        accountRegistry[normCode].ok = ok;
+        accountRegistry[normCode].sk = sk;
+      }
+    }
+
+    function renderTAccount(accType, accNum, sn, debitOps, creditOps, od, ok, sk) {
+      const isPassive = accType === 'passive';
+      document.getElementById('resAccNum').textContent = accNum || '—';
+      document.getElementById('accTypeLabel').textContent = isPassive ? 'Пассивный' : 'Активный';
+      document.getElementById('accTypeLabel').className = `text-xs font-medium px-2 py-0.5 rounded ${isPassive ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+      document.getElementById('subDebit').textContent = `Дебет (${isPassive ? '-' : '+'})`;
+      document.getElementById('subCredit').textContent = `Кредит (${isPassive ? '+' : '-'})`;
+      resGrid.innerHTML = '';
+
+      const createRow = (d, c, cls = '') => {
+        resGrid.innerHTML += `<div class="t-account-row ${cls}"><div class="t-cell t-cell-debit text-slate-700 font-mono">${d}</div><div class="t-cell t-cell-credit text-slate-700 font-mono">${c}</div></div>`;
+      };
+
+      if (sn !== 0) {
+        const txt = `<span class="text-slate-500 text-xs mr-1">Сн =</span>${formatter.format(sn)}`;
+        createRow(isPassive ? '' : txt, isPassive ? txt : '');
+      }
+      const maxLen = Math.max(debitOps.length, creditOps.length);
+      for (let i = 0; i < maxLen; i++) createRow(i < debitOps.length ? formatter.format(debitOps[i]) : '', i < creditOps.length ? formatter.format(creditOps[i]) : '');
+      createRow(`<span class="text-blue-700 font-bold">Од = ${formatter.format(od)}</span>`, `<span class="text-red-700 font-bold">Ок = ${formatter.format(ok)}</span>`, 'bg-blue-50/50 border-t border-slate-300');
+      const skTxt = `<span class="text-green-700 font-bold text-sm">Ск = ${formatter.format(sk)}</span>`;
+      createRow(isPassive ? '' : skTxt, isPassive ? skTxt : '', 'bg-green-50/60 mt-1 border-t border-slate-300');
+
+      document.getElementById('formulaText').textContent = isPassive
+        ? `Ск = Сн(${sn}) + Ок(${ok}) - Од(${od}) = ${formatter.format(sk)}`
+        : `Ск = Сн(${sn}) + Од(${od}) - Ок(${ok}) = ${formatter.format(sk)}`;
+      resultSection.classList.remove('hidden');
+    }
+
+    // Расчет Баланса
+    function calculateBalance() {
+      const code = document.getElementById('balCode').value.trim();
+      const amountRaw = document.getElementById('balAmount').value.replace(/\s/g, '');
+      const amount = parseFloat(amountRaw) || 0;
+      const type = document.getElementById('balType').value;
+
+      if (!code) return alert('Введите код счета');
+
+      const normCode = code.replace(/\D/g, '').padStart(2, '0');
+      if (!accountRegistry[normCode]) {
+        accountRegistry[normCode] = { name: accountNames[normCode] || `Счет ${normCode}`, type, sn: 0, od: 0, ok: 0, sk: 0 };
+      }
+      accountRegistry[normCode].type = type;
+      accountRegistry[normCode].sn = amount;
+
+      document.getElementById('balCode').value = '';
+      document.getElementById('balAmount').value = '';
+      renderBalanceSheet();
+    }
+
+    function renderBalanceSheet() {
+      balanceAssetsEl.innerHTML = '';
+      balanceLiabilitiesEl.innerHTML = '';
+      let totalAssets = 0, totalLiab = 0;
+
+      const sections = {
+        assets: [
+          { id: 'vneob', name: 'I. Внеоборотные активы', codes: ['01','03','04','07','08','09','02','05'] },
+          { id: 'oborot', name: 'II. Оборотные активы', codes: ['10','11','19','20','21','23','28','29','41','43','44','45','46','50','51','52','55','57','58','62','71','73','75','76','78','79','94','97'] }
+        ],
+        liabilities: [
+          { id: 'kapital', name: 'III. Капитал и резервы', codes: ['80','81','82','83','84'] },
+          { id: 'dolgosrok', name: 'IV. Долгосрочные обязательства', codes: ['67','77','96','98'] },
+          { id: 'kratkosrok', name: 'V. Краткосрочные обязательства', codes: ['60','66','70','68','69','71','73','75','76'] }
+        ]
+      };
+
+      const renderSection = (container, section, expectedType) => {
+        let sum = 0;
+        let html = `<div class="bg-white rounded border border-slate-200 p-2 shadow-sm"><p class="text-xs font-bold text-slate-600 mb-1">${section.name}</p>`;
+        let hasRows = false;
+
+        section.codes.forEach(code => {
+          const acc = accountRegistry[code];
+          const isContra = contraAccounts.includes(code);
+          if (acc && acc.sn > 0) {
+            if (isContra) {
+              sum -= acc.sn;
+              html += `<div class="balance-row text-red-600"><span class="font-mono text-xs">${code} (–)</span><span class="font-mono text-xs">–${formatter.format(acc.sn)}</span></div>`;
+              hasRows = true;
+            } else if (acc.type === expectedType) {
+              sum += acc.sn;
+              html += `<div class="balance-row text-slate-700"><span class="font-mono text-xs">${code}</span><span class="font-mono text-xs">${formatter.format(acc.sn)}</span></div>`;
+              hasRows = true;
+            }
+          }
+        });
+
+        if (!hasRows) html += `<div class="text-xs text-slate-400 italic py-1">Нет данных</div>`;
+        html += `<div class="flex justify-between items-center pt-1 mt-1 border-t border-dashed border-slate-300"><span class="text-xs font-bold text-slate-800">Итог:</span><span class="text-xs font-bold text-slate-900 font-mono">${formatter.format(sum)}</span></div></div>`;
+        container.innerHTML += html;
+        return sum;
+      };
+
+      sections.assets.forEach(s => totalAssets += renderSection(balanceAssetsEl, s, 'active'));
+      sections.liabilities.forEach(s => totalLiab += renderSection(balanceLiabilitiesEl, s, 'passive'));
+
+      document.getElementById('totalAssets').textContent = formatter.format(totalAssets);
+      document.getElementById('totalLiabilities').textContent = formatter.format(totalLiab);
+    }
+
+    function toggleAccountsList() {
+      const section = document.getElementById('accountsListSection');
+      section.classList.toggle('hidden');
+      if (!section.classList.contains('hidden')) {
+        renderAccountsList();
+      }
+    }
+
+    function renderAccountsList() {
+      const container = document.getElementById('accountsList');
+      const accounts = Object.entries(accountRegistry).filter(([code, acc]) => acc.sn > 0);
+
+      if (accounts.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 italic">Нет добавленных счетов</p>';
+        return;
+      }
+
+      container.innerHTML = accounts.map(([code, acc]) => `
+        <div class="flex items-center gap-2 bg-white p-2 rounded border border-slate-200 text-sm">
+          <input type="text" value="${code}" readonly class="w-10 text-center font-mono bg-slate-100 rounded py-1 text-slate-500 cursor-not-allowed" title="Код счета">
+          <select onchange="updateAccount('${code}', 'type', this.value)" class="border border-slate-300 rounded px-2 py-1 text-xs ${acc.type === 'active' ? 'text-blue-600' : 'text-red-600'}">
+            <option value="active" ${acc.type === 'active' ? 'selected' : ''}>Актив</option>
+            <option value="passive" ${acc.type === 'passive' ? 'selected' : ''}>Пассив</option>
+          </select>
+          <input type="text" value="${acc.sn}" onchange="updateAccount('${code}', 'sn', this.value)" class="w-24 font-mono text-right border border-slate-300 rounded px-2 py-1" placeholder="Сумма">
+          <button onclick="deleteAccount('${code}')" class="text-red-400 hover:text-red-600 p-1" title="Удалить">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function updateAccount(code, field, value) {
+      if (field === 'sn') {
+        const num = parseFloat(value.replace(/\s/g, '')) || 0;
+        if (accountRegistry[code]) {
+          accountRegistry[code][field] = num;
+        }
+      } else {
+        if (accountRegistry[code]) {
+          accountRegistry[code][field] = value;
+        }
+      }
+      renderBalanceSheet();
+      renderAccountsList();
+    }
+
+    function deleteAccount(code) {
+      if (accountRegistry[code]) {
+        delete accountRegistry[code];
+      }
+      renderBalanceSheet();
+      renderAccountsList();
+    }
+
+    // Калькулятор события
+    document.getElementById('calcBtn').addEventListener('click', () => {
+      const accType = document.getElementById('accType').value;
+      const accNum = document.getElementById('accNumber').value.trim();
+      const normCode = accNum.replace(/\D/g, '').padStart(2, '0');
+
+      const inputSn = parseFloat(document.getElementById('openingBalance').value.replace(/\s/g, '')) || 0;
+      const existingAcc = accountRegistry[normCode];
+      const sn = inputSn > 0 ? inputSn : (existingAcc && existingAcc.sn > 0 ? existingAcc.sn : 0);
+
+      const debitOps = getValues(debitListEl);
+      const creditOps = getValues(creditListEl);
+      const od = debitOps.reduce((a, b) => a + b, 0);
+      const ok = creditOps.reduce((a, b) => a + b, 0);
+      const sk = accType === 'active' ? sn + od - ok : sn + ok - od;
+
+      saveToRegistry(accNum, accType, sn, od, ok, sk);
+      renderTAccount(accType, accNum, sn, debitOps, creditOps, od, ok, sk);
+      renderTable();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('accType').value = 'active';
+      document.getElementById('accNumber').value = '';
+      document.getElementById('openingBalance').value = '';
+      debitListEl.innerHTML = ''; creditListEl.innerHTML = '';
+      resultSection.classList.add('hidden');
+      addOperationRow('debit'); addOperationRow('credit');
+    });
+
+    function renderTable() {
+      tableBody.innerHTML = '';
+      const existingCodes = Object.keys(accountRegistry).sort();
+      
+      if (existingCodes.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" class="px-2 py-4 text-center text-slate-400 text-xs">Нет данных</td></tr>';
+        return;
+      }
+
+      let totalSnDr = 0, totalSnCr = 0, totalOd = 0, totalOk = 0, totalSkDr = 0, totalSkCr = 0;
+
+      existingCodes.forEach(code => {
+        const data = accountRegistry[code];
+        if (!data.sn && !data.od && !data.ok) return;
+        
+        const effectiveSk = (data.sk === 0 && data.sn > 0) 
+          ? (data.type === 'active' ? data.sn + data.od - data.ok : data.sn + data.ok - data.od) 
+          : data.sk;
+        const isPop = data.od !== 0 || data.ok !== 0 || data.sn !== 0;
+        const snDr = data.type === 'active' ? data.sn : 0;
+        const snCr = data.type === 'passive' ? data.sn : 0;
+        const odV = data.od ? formatter.format(data.od) : '';
+        const okV = data.ok ? formatter.format(data.ok) : '';
+        const skDr = data.type === 'active' ? effectiveSk : 0;
+        const skCr = data.type === 'passive' ? effectiveSk : 0;
+
+        totalSnDr += snDr;
+        totalSnCr += snCr;
+        totalOd += data.od;
+        totalOk += data.ok;
+        totalSkDr += skDr;
+        totalSkCr += skCr;
+
+        const nameValue = data.name || accountNames[code] || '';
+        
+        tableBody.innerHTML += `
+          <tr class="border-b border-slate-200 hover:bg-blue-50 transition ${isPop ? 'bg-white' : 'bg-slate-50/50'}">
+            <td class="px-2 py-1.5 font-mono font-bold text-slate-500 border-r border-slate-300">${code}</td>
+            <td class="px-2 py-1.5 border-r border-slate-300">
+              <input type="text" value="${nameValue}" class="w-full bg-transparent text-xs outline-none focus:bg-white focus:ring-1 focus:ring-blue-300 rounded px-1" onchange="if(accountRegistry['${code}'])accountRegistry['${code}'].name=this.value">
+            </td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs border-r border-slate-300 ${data.type==='active'?'font-semibold text-slate-700':'text-slate-400'}">${snDr ? formatter.format(snDr) : ''}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs border-r border-slate-300 ${data.type==='passive'?'font-semibold text-slate-700':'text-slate-400'}">${snCr ? formatter.format(snCr) : ''}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs font-medium text-blue-700 border-r border-slate-300">${odV}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs font-medium text-red-700 border-r border-slate-300">${okV}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs font-bold text-green-700 border-r border-slate-300 bg-green-50/20">${skDr ? formatter.format(skDr) : ''}</td>
+            <td class="px-2 py-1.5 text-right font-mono text-xs font-bold text-green-700 bg-green-50/20">${skCr ? formatter.format(skCr) : ''}</td>
+          </tr>`;
+      });
+
+      tableBody.innerHTML += `
+        <tr class="border-b border-slate-300 bg-slate-100 font-bold">
+          <td class="px-2 py-2 border-r border-slate-300" colspan="2">Итого</td>
+          <td class="px-2 py-2 text-right font-mono text-xs border-r border-slate-300">${formatter.format(totalSnDr)}</td>
+          <td class="px-2 py-2 text-right font-mono text-xs border-r border-slate-300">${formatter.format(totalSnCr)}</td>
+          <td class="px-2 py-2 text-right font-mono text-xs border-r border-slate-300">${formatter.format(totalOd)}</td>
+          <td class="px-2 py-2 text-right font-mono text-xs border-r border-slate-300">${formatter.format(totalOk)}</td>
+          <td class="px-2 py-2 text-right font-mono text-xs border-r border-slate-300">${formatter.format(totalSkDr)}</td>
+          <td class="px-2 py-2 text-right font-mono text-xs">${formatter.format(totalSkCr)}</td>
+        </tr>`;
+    }
+
+    const excludedFromBalance = ['90', '91', '99'];
+
+    function openEndBalanceModal() {
+      Object.keys(accountRegistry).forEach(code => {
+        const acc = accountRegistry[code];
+        if (acc.sn > 0) {
+          acc.sk = acc.type === 'active' ? acc.sn + acc.od - acc.ok : acc.sn + acc.ok - acc.od;
+        }
+      });
+      renderTable();
+      document.getElementById('endBalanceModal').classList.remove('hidden');
+      renderEndBalanceSections();
+    }
+
+    function closeEndBalanceModal() {
+      document.getElementById('endBalanceModal').classList.add('hidden');
+    }
+
+    function renderEndBalanceSections() {
+      const startAssetsEl = document.getElementById('endStartAssets');
+      const startLiabEl = document.getElementById('endStartLiabilities');
+      const endAssetsEl = document.getElementById('endEndAssets');
+      const endLiabEl = document.getElementById('endEndLiabilities');
+
+      startAssetsEl.innerHTML = ''; startLiabEl.innerHTML = '';
+      endAssetsEl.innerHTML = ''; endLiabEl.innerHTML = '';
+
+      let startTotalAssets = 0, startTotalLiab = 0;
+      let endTotalAssets = 0, endTotalLiab = 0;
+
+      const sections = {
+        assets: [
+          { id: 'vneob', name: 'I. Внеоборотные активы', codes: ['01','03','04','07','08','09','02','05'] },
+          { id: 'oborot', name: 'II. Оборотные активы', codes: ['10','11','19','20','21','23','28','29','41','43','44','45','46','50','51','52','55','57','58','62','71','73','75','76','78','79','94','97'] }
+        ],
+        liabilities: [
+          { id: 'kapital', name: 'III. Капитал и резервы', codes: ['80','81','82','83','84'] },
+          { id: 'dolgosrok', name: 'IV. Долгосрочные обязательства', codes: ['67','77','96','98'] },
+          { id: 'kratkosrok', name: 'V. Краткосрочные обязательства', codes: ['60','66','70','68','69','71','73','75','76'] }
+        ]
+      };
+
+      const renderStartSection = (container, section, expectedType) => {
+        let sum = 0;
+        let html = `<div class="bg-white rounded border border-slate-200 p-2 shadow-sm mb-2"><p class="text-xs font-bold text-slate-600 mb-1">${section.name}</p>`;
+        let hasRows = false;
+        section.codes.forEach(code => {
+          const acc = accountRegistry[code];
+          const isContra = contraAccounts.includes(code);
+          if (acc && acc.sn > 0 && !excludedFromBalance.includes(code)) {
+            if (isContra) {
+              sum -= acc.sn;
+              html += `<div class="balance-row text-red-600"><span class="font-mono text-xs">${code} (–)</span><span class="font-mono text-xs">–${formatter.format(acc.sn)}</span></div>`;
+              hasRows = true;
+            } else if (acc.type === expectedType) {
+              sum += acc.sn;
+              html += `<div class="balance-row text-slate-700"><span class="font-mono text-xs">${code}</span><span class="font-mono text-xs">${formatter.format(acc.sn)}</span></div>`;
+              hasRows = true;
+            }
+          }
+        });
+        if (!hasRows) html += `<div class="text-xs text-slate-400 italic py-1">Нет данных</div>`;
+        html += `<div class="flex justify-between items-center pt-1 mt-1 border-t border-dashed border-slate-300"><span class="text-xs font-bold text-slate-800">Итог:</span><span class="text-xs font-bold text-slate-900 font-mono">${formatter.format(sum)}</span></div></div>`;
+        container.innerHTML = html;
+        return sum;
+      };
+
+      const renderEndSection = (container, section, expectedType) => {
+        let sum = 0;
+        let html = `<div class="bg-white rounded border border-slate-200 p-2 shadow-sm mb-2"><p class="text-xs font-bold text-slate-600 mb-1">${section.name}</p>`;
+        let hasRows = false;
+        section.codes.forEach(code => {
+          const acc = accountRegistry[code];
+          const isContra = contraAccounts.includes(code);
+          if (acc && acc.sk > 0 && !excludedFromBalance.includes(code)) {
+            if (isContra) {
+              sum -= acc.sk;
+              html += `<div class="balance-row text-red-600"><span class="font-mono text-xs">${code} (–)</span><span class="font-mono text-xs">–${formatter.format(acc.sk)}</span></div>`;
+              hasRows = true;
+            } else if (acc.type === expectedType) {
+              sum += acc.sk;
+              html += `<div class="balance-row text-slate-700"><span class="font-mono text-xs">${code}</span><span class="font-mono text-xs">${formatter.format(acc.sk)}</span></div>`;
+              hasRows = true;
+            }
+          }
+        });
+        if (!hasRows) html += `<div class="text-xs text-slate-400 italic py-1">Нет данных</div>`;
+        html += `<div class="flex justify-between items-center pt-1 mt-1 border-t border-dashed border-slate-300"><span class="text-xs font-bold text-slate-800">Итог:</span><span class="text-xs font-bold text-slate-900 font-mono">${formatter.format(sum)}</span></div></div>`;
+        container.innerHTML = html;
+        return sum;
+      };
+
+      sections.assets.forEach(s => { startTotalAssets += renderStartSection(startAssetsEl, s, 'active'); endTotalAssets += renderEndSection(endAssetsEl, s, 'active'); });
+      sections.liabilities.forEach(s => { startTotalLiab += renderStartSection(startLiabEl, s, 'passive'); endTotalLiab += renderEndSection(endLiabEl, s, 'passive'); });
+
+      document.getElementById('endStartTotalAssets').textContent = formatter.format(startTotalAssets);
+      document.getElementById('endStartTotalLiabilities').textContent = formatter.format(startTotalLiab);
+      document.getElementById('endEndTotalAssets').textContent = formatter.format(endTotalAssets);
+      document.getElementById('endEndTotalLiabilities').textContent = formatter.format(endTotalLiab);
+    }
+  </script>
+
+  <!-- Модальное окно Баланс (конец) -->
+  <div id="endBalanceModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-2">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+      <div class="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-3 flex justify-between items-center">
+        <h2 class="text-lg font-bold">Баланс на конец периода</h2>
+        <button onclick="closeEndBalanceModal()" class="text-slate-300 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+      <div class="flex-1 overflow-auto p-3">
+        <div class="grid grid-cols-2 gap-3">
+          <!-- Баланс начало -->
+          <div class="border border-slate-300 rounded-lg overflow-hidden">
+            <div class="bg-blue-50 py-2 px-3 border-b border-slate-300">
+              <h3 class="font-bold text-blue-800 text-sm text-center">Баланс (начало)</h3>
+            </div>
+            <div class="grid grid-cols-2 divide-x divide-slate-300 max-h-80 overflow-y-auto">
+              <div class="p-2">
+                <h4 class="font-bold text-blue-700 text-xs text-center mb-2">Актив</h4>
+                <div id="endStartAssets" class="space-y-1"></div>
+                <div class="mt-2 pt-2 border-t border-slate-400 flex justify-between">
+                  <span class="font-bold text-xs">Итого:</span>
+                  <span id="endStartTotalAssets" class="font-bold text-blue-800 font-mono text-sm">0.00</span>
+                </div>
+              </div>
+              <div class="p-2">
+                <h4 class="font-bold text-red-700 text-xs text-center mb-2">Пассив</h4>
+                <div id="endStartLiabilities" class="space-y-1"></div>
+                <div class="mt-2 pt-2 border-t border-slate-400 flex justify-between">
+                  <span class="font-bold text-xs">Итого:</span>
+                  <span id="endStartTotalLiabilities" class="font-bold text-red-800 font-mono text-sm">0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Баланс конец -->
+          <div class="border border-slate-300 rounded-lg overflow-hidden">
+            <div class="bg-green-50 py-2 px-3 border-b border-slate-300">
+              <h3 class="font-bold text-green-800 text-sm text-center">Баланс (конец)</h3>
+            </div>
+            <div class="grid grid-cols-2 divide-x divide-slate-300 max-h-80 overflow-y-auto">
+              <div class="p-2">
+                <h4 class="font-bold text-blue-700 text-xs text-center mb-2">Актив</h4>
+                <div id="endEndAssets" class="space-y-1"></div>
+                <div class="mt-2 pt-2 border-t border-slate-400 flex justify-between">
+                  <span class="font-bold text-xs">Итого:</span>
+                  <span id="endEndTotalAssets" class="font-bold text-blue-800 font-mono text-sm">0.00</span>
+                </div>
+              </div>
+              <div class="p-2">
+                <h4 class="font-bold text-red-700 text-xs text-center mb-2">Пассив</h4>
+                <div id="endEndLiabilities" class="space-y-1"></div>
+                <div class="mt-2 pt-2 border-t border-slate-400 flex justify-between">
+                  <span class="font-bold text-xs">Итого:</span>
+                  <span id="endEndTotalLiabilities" class="font-bold text-red-800 font-mono text-sm">0.00</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="p-3 border-t border-slate-200 bg-slate-50 text-center">
+        <p class="text-xs text-slate-500">Данные берутся из синтетической таблицы (Ск = Сн + Обороты)</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
